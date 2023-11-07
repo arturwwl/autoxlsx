@@ -135,6 +135,9 @@ func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) error {
 			return err
 		}
 
+		if fieldOptions.Skip {
+			continue
+		}
 		cell := row.AddCell()
 
 		fieldOptions.ApplyToHeaderCell(cell)
@@ -154,6 +157,7 @@ func (g *Generator) parseTagValue(sheetNo int, tagValue string) (*CustomOptions,
 	if err != nil {
 		return nil, err
 	}
+
 	g.customOptions[sheetNo] = append(g.customOptions[sheetNo], options)
 
 	return options, nil
@@ -168,9 +172,14 @@ func (g *Generator) AddRow(sheetNo int, t reflect.Type, s reflect.Value) error {
 
 	row := sheet.AddRow()
 	for i := 0; i < t.NumField(); i++ {
+		fieldOptions := g.customOptions[sheetNo][i]
+		if fieldOptions.Skip {
+			continue
+		}
+
 		cell := row.AddCell()
 		cell.SetValue(s.Field(i).Interface())
-		g.customOptions[sheetNo][i].ApplyToCell(cell)
+		fieldOptions.ApplyToCell(cell)
 	}
 
 	return nil

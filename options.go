@@ -12,10 +12,17 @@ type CustomOptions struct {
 	Format     string
 	Width      float64
 	ColumnName string
+	Skip       bool
 }
 
 // NewCustomOptions creates CustomOptions from tag value
 func NewCustomOptions(tagValue string) (*CustomOptions, error) {
+	if tagValue == "" || tagValue == "-" {
+		return &CustomOptions{
+			Skip: true,
+		}, nil
+	}
+
 	values := strings.Split(tagValue, ",")
 	options := &CustomOptions{
 		ColumnName: values[0],
