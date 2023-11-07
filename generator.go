@@ -126,8 +126,8 @@ func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) error {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		tagValue, ok := f.Tag.Lookup("xlsx")
-		if !ok || tagValue == "-" {
-			continue
+		if !ok {
+			tagValue = ""
 		}
 
 		fieldOptions, err := g.parseTagValue(sheetNo, tagValue)
