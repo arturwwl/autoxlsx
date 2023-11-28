@@ -88,16 +88,18 @@ func (g *Generator) AddData(sheetNo int, data interface{}) error {
 		return ErrEmptySlice
 	}
 
+	var rowLength int
 	var i int
 	for i = 0; i < sLen; i++ {
 		s := sData.Index(i)
 		t := s.Type()
 
 		if i == 0 {
-			err := g.AddHeaders(sheetNo, t)
+			count, err := g.AddHeaders(sheetNo, t)
 			if err != nil {
 				return err
 			}
+			rowLength = count
 		}
 
 		err := g.AddRow(sheetNo, t, s)
@@ -111,17 +113,18 @@ func (g *Generator) AddData(sheetNo int, data interface{}) error {
 		return err
 	}
 
-	sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: fmt.Sprintf("%s%d", gointtoletters.IntToLetters(i), 1)}
+	sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: fmt.Sprintf("%s%d", gointtoletters.IntToLetters(rowLength), i)}
 	return nil
 }
 
 // AddHeaders creates headers row
-func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) error {
+func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) (int, error) {
 	sheet, err := g.GetSheet(sheetNo)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
+	var count int
 	row := sheet.AddRow()
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -132,7 +135,7 @@ func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) error {
 
 		fieldOptions, err := g.parseTagValue(sheetNo, tagValue)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		if fieldOptions.Skip {
@@ -142,9 +145,10 @@ func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) error {
 
 		fieldOptions.ApplyToHeaderCell(cell)
 		fieldOptions.ApplyToCol(sheet.Cols[i])
+		count++
 	}
 
-	return nil
+	return count, nil
 }
 
 func (g *Generator) parseTagValue(sheetNo int, tagValue string) (*CustomOptions, error) {
