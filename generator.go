@@ -178,11 +178,27 @@ func (g *Generator) AddRow(sheetNo int, t reflect.Type, s reflect.Value) error {
 		}
 
 		cell := row.AddCell()
-		cell.SetValue(s.Field(i).Interface())
+		addDataToCell(s.Field(i), cell)
+
 		fieldOptions.ApplyToCell(cell)
 	}
 
 	return nil
+}
+
+func addDataToCell(data reflect.Value, cell *xlsx.Cell) {
+	if data.Kind() == reflect.Pointer {
+		if data.IsNil() {
+			cell.SetValue(nil)
+			return
+		}
+
+		addDataToCell(data.Elem(), cell)
+		return
+	}
+
+	v := data.Interface()
+	cell.SetValue(v)
 }
 
 // SaveTo writes generated xlsx to io.Writer

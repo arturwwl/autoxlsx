@@ -9,6 +9,13 @@ import (
 	"github.com/tealeg/xlsx"
 )
 
+type WithNilStruct struct {
+	ID             int     `xlsx:"id"`
+	NillableString *string `xlsx:"string"`
+}
+
+var exampleString = "example"
+
 func TestGenerator_AddSheet(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -225,6 +232,82 @@ func TestGenerator_AddData(t *testing.T) {
 						{
 							Value:  "2.2",
 							NumFmt: "general",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "add nillable data",
+			args: args{
+				sheetNo: 0,
+				data: []WithNilStruct{
+					{
+						ID:             1,
+						NillableString: &exampleString,
+					},
+				},
+			},
+			currentSheets: 1,
+			want: []*xlsx.Row{
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value: "id",
+						},
+						{
+							Value: "string",
+						},
+					},
+				},
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value:  "1",
+							NumFmt: "general",
+						},
+						{
+							Value:  "example",
+							NumFmt: "",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "add nil data",
+			args: args{
+				sheetNo: 0,
+				data: []WithNilStruct{
+					{
+						ID:             1,
+						NillableString: nil,
+					},
+				},
+			},
+			currentSheets: 1,
+			want: []*xlsx.Row{
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value: "id",
+						},
+						{
+							Value: "string",
+						},
+					},
+				},
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value:  "1",
+							NumFmt: "general",
+						},
+						{
+							Value:  "",
+							NumFmt: "",
 						},
 					},
 				},

@@ -7,7 +7,7 @@ import (
 
 type SomeStruct struct {
 	ID    int     `xlsx:"id"`
-	Value float64 `xlsx:"value,Format:0.000000000000,Width:25"`
+	Value float64 `xlsx:"value,format:0.000000000000,width:25"`
 }
 
 func TestMarshal(t *testing.T) {
