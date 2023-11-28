@@ -314,6 +314,44 @@ func TestGenerator_AddData(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "add pointer to data",
+			args: args{
+				sheetNo: 0,
+				data: []*WithNilStruct{
+					{
+						ID:             1,
+						NillableString: nil,
+					},
+				},
+			},
+			currentSheets: 1,
+			want: []*xlsx.Row{
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value: "id",
+						},
+						{
+							Value: "string",
+						},
+					},
+				},
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value:  "1",
+							NumFmt: "general",
+						},
+						{
+							Value:  "",
+							NumFmt: "",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	ignoreOpts := cmp.Options{

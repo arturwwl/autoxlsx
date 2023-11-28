@@ -94,6 +94,15 @@ func (g *Generator) AddData(sheetNo int, data interface{}) error {
 		s := sData.Index(i)
 		t := s.Type()
 
+		if t.Kind() == reflect.Pointer {
+			if s.IsNil() {
+				continue
+			}
+
+			s = s.Elem()
+			t = s.Type()
+		}
+
 		if i == 0 {
 			count, err := g.AddHeaders(sheetNo, t)
 			if err != nil {
