@@ -13,6 +13,11 @@ type WithNilStruct struct {
 	ID             int     `xlsx:"id"`
 	NillableString *string `xlsx:"string"`
 }
+type WithOmittedFieldStruct struct {
+	ID             int     `xlsx:"id"`
+	OmittedCheck   bool    `xlsx:"-"`
+	NillableString *string `xlsx:"string"`
+}
 
 var exampleString = "example"
 
@@ -345,6 +350,45 @@ func TestGenerator_AddData(t *testing.T) {
 						},
 						{
 							Value:  "",
+							NumFmt: "",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "check skip field",
+			args: args{
+				sheetNo: 0,
+				data: []WithOmittedFieldStruct{
+					{
+						ID:             1,
+						OmittedCheck:   true,
+						NillableString: &exampleString,
+					},
+				},
+			},
+			currentSheets: 1,
+			want: []*xlsx.Row{
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value: "id",
+						},
+						{
+							Value: "string",
+						},
+					},
+				},
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value:  "1",
+							NumFmt: "general",
+						},
+						{
+							Value:  "example",
 							NumFmt: "",
 						},
 					},

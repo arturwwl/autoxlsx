@@ -133,7 +133,7 @@ func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) (int, error) {
 		return 0, err
 	}
 
-	var count int
+	var currentCount int
 	row := sheet.AddRow()
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
@@ -153,11 +153,11 @@ func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) (int, error) {
 		cell := row.AddCell()
 
 		fieldOptions.ApplyToHeaderCell(cell)
-		fieldOptions.ApplyToCol(sheet.Cols[i])
-		count++
+		fieldOptions.ApplyToCol(sheet.Cols[currentCount])
+		currentCount++
 	}
 
-	return count, nil
+	return currentCount, nil
 }
 
 func (g *Generator) parseTagValue(sheetNo int, tagValue string) (*CustomOptions, error) {
