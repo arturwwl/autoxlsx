@@ -123,6 +123,15 @@ func (g *Generator) AddData(sheetNo int, data interface{}) error {
 	}
 
 	sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: fmt.Sprintf("%s%d", gointtoletters.IntToLetters(rowLength), i)}
+	sheet.SheetViews = append(sheet.SheetViews, xlsx.SheetView{
+		Pane: &xlsx.Pane{
+			XSplit:      0,
+			YSplit:      1,
+			TopLeftCell: "A2",
+			ActivePane:  "bottomLeft",
+			State:       "frozen",
+		},
+	})
 	return nil
 }
 
