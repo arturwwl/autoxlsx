@@ -2,6 +2,8 @@ package autoxlsx
 
 import (
 	"reflect"
+	"slices"
+	"time"
 
 	"github.com/tealeg/xlsx"
 )
@@ -40,7 +42,9 @@ func (g *Generator) addTableHeader(row *xlsx.Row, sheetNo int, f reflect.StructF
 	}
 
 	if kind == reflect.Struct {
-		return g.AddTableHeaders(row, sheetNo, fv, currentCount)
+		if !isCommonGoStruct(fv) {
+			return g.AddTableHeaders(row, sheetNo, fv, currentCount)
+		}
 	}
 
 	tagValue, ok := f.Tag.Lookup("xlsx")
@@ -104,7 +108,9 @@ func (g *Generator) addTableDataCell(row *xlsx.Row, sheetNo int, data reflect.Va
 	}
 
 	if kind == reflect.Struct {
-		return g.AddTableDataCells(row, sheetNo, fv.Type(), fv, currentCount)
+		if !isCommonGoStruct(fv.Type()) {
+			return g.AddTableDataCells(row, sheetNo, fv.Type(), fv, currentCount)
+		}
 	}
 
 	fieldOptions := g.customOptions[sheetNo][currentCount]
@@ -132,12 +138,15 @@ func addValueToCell(data reflect.Value, cell *xlsx.Cell) {
 	case reflect.Invalid:
 		cell.SetValue(nil)
 		return
-	case reflect.Int:
-		v := data.Int()
-		cell.SetValue(v)
-		return
 	}
-	v := data.Interface()
 
-	cell.SetValue(v)
+	cell.SetValue(data.Interface())
+}
+
+var commonGoStructs = []reflect.Type{
+	reflect.TypeOf(time.Time{}),
+}
+
+func isCommonGoStruct(t reflect.Type) bool {
+	return slices.Contains(commonGoStructs, t)
 }

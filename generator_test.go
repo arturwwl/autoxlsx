@@ -3,6 +3,7 @@ package autoxlsx
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -27,6 +28,11 @@ type WithNestedStruct struct {
 type WithNestedStruct2 struct {
 	*WithOmittedFieldStruct
 	WithNilStruct
+}
+
+type WithTypeStruct struct {
+	ID       int       `xlsx:"id"`
+	SomeTime time.Time `xlsx:"time,format:yy-mm-dd hh:mm"`
 }
 
 var exampleString = "example"
@@ -518,6 +524,44 @@ func TestGenerator_AddData(t *testing.T) {
 						{
 							Value:  "",
 							NumFmt: "",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "check with time",
+			args: args{
+				sheetNo: 0,
+				data: []WithTypeStruct{
+					{
+						ID:       2,
+						SomeTime: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+					},
+				},
+			},
+			currentSheets: 1,
+			want: []*xlsx.Row{
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value: "id",
+						},
+						{
+							Value: "time",
+						},
+					},
+				},
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value:  "2",
+							NumFmt: "general",
+						},
+						{
+							Value:  "43831",
+							NumFmt: "yy-mm-dd hh:mm",
 						},
 					},
 				},
