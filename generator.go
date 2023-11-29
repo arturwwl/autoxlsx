@@ -104,14 +104,14 @@ func (g *Generator) AddData(sheetNo int, data interface{}) error {
 		}
 
 		if i == 0 {
-			count, err := g.AddHeaders(sheetNo, t)
+			count, err := g.AddTableHeaders(nil, sheetNo, t, 0)
 			if err != nil {
 				return err
 			}
 			rowLength = count
 		}
 
-		err := g.AddRow(sheetNo, t, s)
+		_, err := g.AddTableDataCells(nil, sheetNo, t, s, 0)
 		if err != nil {
 			return err
 		}
@@ -124,40 +124,6 @@ func (g *Generator) AddData(sheetNo int, data interface{}) error {
 
 	sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: fmt.Sprintf("%s%d", gointtoletters.IntToLetters(rowLength), i)}
 	return nil
-}
-
-// AddHeaders creates headers row
-func (g *Generator) AddHeaders(sheetNo int, t reflect.Type) (int, error) {
-	sheet, err := g.GetSheet(sheetNo)
-	if err != nil {
-		return 0, err
-	}
-
-	var currentCount int
-	row := sheet.AddRow()
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-		tagValue, ok := f.Tag.Lookup("xlsx")
-		if !ok {
-			tagValue = ""
-		}
-
-		fieldOptions, err := g.parseTagValue(sheetNo, tagValue)
-		if err != nil {
-			return 0, err
-		}
-
-		if fieldOptions.Skip {
-			continue
-		}
-		cell := row.AddCell()
-
-		fieldOptions.ApplyToHeaderCell(cell)
-		fieldOptions.ApplyToCol(sheet.Cols[currentCount])
-		currentCount++
-	}
-
-	return currentCount, nil
 }
 
 func (g *Generator) parseTagValue(sheetNo int, tagValue string) (*CustomOptions, error) {
@@ -174,44 +140,6 @@ func (g *Generator) parseTagValue(sheetNo int, tagValue string) (*CustomOptions,
 	g.customOptions[sheetNo] = append(g.customOptions[sheetNo], options)
 
 	return options, nil
-}
-
-// AddRow creates new data row
-func (g *Generator) AddRow(sheetNo int, t reflect.Type, s reflect.Value) error {
-	sheet, err := g.GetSheet(sheetNo)
-	if err != nil {
-		return err
-	}
-
-	row := sheet.AddRow()
-	for i := 0; i < t.NumField(); i++ {
-		fieldOptions := g.customOptions[sheetNo][i]
-		if fieldOptions.Skip {
-			continue
-		}
-
-		cell := row.AddCell()
-		addDataToCell(s.Field(i), cell)
-
-		fieldOptions.ApplyToCell(cell)
-	}
-
-	return nil
-}
-
-func addDataToCell(data reflect.Value, cell *xlsx.Cell) {
-	if data.Kind() == reflect.Pointer {
-		if data.IsNil() {
-			cell.SetValue(nil)
-			return
-		}
-
-		addDataToCell(data.Elem(), cell)
-		return
-	}
-
-	v := data.Interface()
-	cell.SetValue(v)
 }
 
 // SaveTo writes generated xlsx to io.Writer

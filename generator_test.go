@@ -19,6 +19,16 @@ type WithOmittedFieldStruct struct {
 	NillableString *string `xlsx:"string"`
 }
 
+type WithNestedStruct struct {
+	WithOmittedFieldStruct
+	WithNilStruct
+}
+
+type WithNestedStruct2 struct {
+	*WithOmittedFieldStruct
+	WithNilStruct
+}
+
 var exampleString = "example"
 
 func TestGenerator_AddSheet(t *testing.T) {
@@ -236,7 +246,7 @@ func TestGenerator_AddData(t *testing.T) {
 						},
 						{
 							Value:  "2.2",
-							NumFmt: "general",
+							NumFmt: "0.000000000000",
 						},
 					},
 				},
@@ -389,6 +399,124 @@ func TestGenerator_AddData(t *testing.T) {
 						},
 						{
 							Value:  "example",
+							NumFmt: "",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "check nested struct",
+			args: args{
+				sheetNo: 0,
+				data: []WithNestedStruct{
+					{
+						WithOmittedFieldStruct: WithOmittedFieldStruct{
+							ID:             2,
+							OmittedCheck:   false,
+							NillableString: &exampleString,
+						},
+						WithNilStruct: WithNilStruct{
+							ID:             1,
+							NillableString: nil,
+						},
+					},
+				},
+			},
+			currentSheets: 1,
+			want: []*xlsx.Row{
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value: "id",
+						},
+						{
+							Value: "string",
+						},
+						{
+							Value: "id",
+						},
+						{
+							Value: "string",
+						},
+					},
+				},
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value:  "2",
+							NumFmt: "general",
+						},
+						{
+							Value:  "example",
+							NumFmt: "",
+						},
+						{
+							Value:  "1",
+							NumFmt: "general",
+						},
+						{
+							Value:  "",
+							NumFmt: "",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "check nested struct (with pointer)",
+			args: args{
+				sheetNo: 0,
+				data: []WithNestedStruct2{
+					{
+						WithOmittedFieldStruct: &WithOmittedFieldStruct{
+							ID:             2,
+							OmittedCheck:   false,
+							NillableString: &exampleString,
+						},
+						WithNilStruct: WithNilStruct{
+							ID:             1,
+							NillableString: nil,
+						},
+					},
+				},
+			},
+			currentSheets: 1,
+			want: []*xlsx.Row{
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value: "id",
+						},
+						{
+							Value: "string",
+						},
+						{
+							Value: "id",
+						},
+						{
+							Value: "string",
+						},
+					},
+				},
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value:  "2",
+							NumFmt: "general",
+						},
+						{
+							Value:  "example",
+							NumFmt: "",
+						},
+						{
+							Value:  "1",
+							NumFmt: "general",
+						},
+						{
+							Value:  "",
 							NumFmt: "",
 						},
 					},
