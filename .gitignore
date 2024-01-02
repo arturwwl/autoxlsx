@@ -1,0 +1,9 @@
+# idea and editors
+.idea
+.DS_Store
+
+# generated files
+*.xlsx
+
+# build file
+go_build_autoxlsx
