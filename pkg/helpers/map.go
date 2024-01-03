@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"reflect"
+	"slices"
 )
 
 // GetMapKeys retrieves the keys of a map from a reflect.StructField.
@@ -26,6 +27,7 @@ func AreAllMapKeysSame(fields []reflect.Value) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	slices.Sort(firstFieldKeys)
 
 	// Iterate over the remaining fields and compare keys
 	for _, field := range fields[1:] {
@@ -33,6 +35,7 @@ func AreAllMapKeysSame(fields []reflect.Value) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+		slices.Sort(currentKeys)
 
 		// Check if the keys are the same
 		if !reflect.DeepEqual(firstFieldKeys, currentKeys) {
