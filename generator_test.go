@@ -30,12 +30,18 @@ type WithNestedStruct2 struct {
 	WithNilStruct
 }
 
+type WithMap struct {
+	Map1 map[string]*float64 `xlsx:"*"`
+	Map2 map[string]string   `xlsx:"*"`
+}
+
 type WithTypeStruct struct {
 	ID       int       `xlsx:"id"`
 	SomeTime time.Time `xlsx:"time,format:yy-mm-dd hh:mm"`
 }
 
 var exampleString = "example"
+var exampleFloat = 2.2
 
 func TestGenerator_AddSheet(t *testing.T) {
 	tests := []struct {
@@ -374,6 +380,95 @@ func TestGenerator_AddData(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "add map",
+			args: args{
+				sheetNo: 0,
+				data: []WithMap{
+					{
+						Map1: map[string]*float64{
+							"Item 1": &exampleFloat,
+							"Item 2": &exampleFloat,
+						},
+						Map2: map[string]string{
+							"Something 1": "test1",
+							"Something 2": "test2",
+						},
+					},
+				},
+			},
+			currentSheets: 1,
+			want: []*xlsx.Row{
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value: "Item 1",
+						},
+						{
+							Value: "Item 2",
+						},
+						{
+							Value: "Something 1",
+						},
+						{
+							Value: "Something 2",
+						},
+					},
+				},
+				{
+					Cells: []*xlsx.Cell{
+						{
+							Value:  "2.2",
+							NumFmt: "general",
+						},
+						{
+							Value:  "2.2",
+							NumFmt: "general",
+						},
+						{
+							Value:  "test1",
+							NumFmt: "",
+						},
+						{
+							Value:  "test2",
+							NumFmt: "",
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "add invalid map",
+			args: args{
+				sheetNo: 0,
+				data: []WithMap{
+					{
+						Map1: map[string]*float64{
+							"Item 1": &exampleFloat,
+							"Item 2": &exampleFloat,
+						},
+						Map2: map[string]string{
+							"Something 1": "test1",
+							"Something 2": "test2",
+						},
+					},
+					{
+						Map1: map[string]*float64{
+							"Item 1": &exampleFloat,
+							"Item 2": &exampleFloat,
+						},
+						Map2: map[string]string{
+							"Something 3": "test1",
+							"Something 4": "test2",
+						},
+					},
+				},
+			},
+			currentSheets: 1,
+			want:          nil,
+			wantErr:       true,
+		},
+		{
 			name: "check skip field",
 			args: args{
 				sheetNo: 0,
@@ -574,7 +669,13 @@ func TestGenerator_AddData(t *testing.T) {
 		cmpopts.IgnoreUnexported(xlsx.Row{}, xlsx.Cell{}),
 		cmpopts.IgnoreFields(xlsx.Row{}, "Sheet"),
 		cmpopts.IgnoreFields(xlsx.Cell{}, "Row"),
+		cmpopts.SortSlices(
+			func(i, j *xlsx.Cell) bool {
+				return i.Value < j.Value
+			},
+		),
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			generator := &Generator{

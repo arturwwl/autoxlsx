@@ -2,77 +2,11 @@ package autoxlsx
 
 import (
 	"reflect"
-	"slices"
-	"time"
 
 	"github.com/tealeg/xlsx"
+
+	"github.com/arturwwl/autoxlsx/pkg/helpers"
 )
-
-// AddTableHeaders creates headers row
-func (g *Generator) AddTableHeaders(row *xlsx.Row, sheetNo int, t reflect.Type, count int) (int, error) {
-	if row == nil {
-		sheet, err := g.GetSheet(sheetNo)
-		if err != nil {
-			return 0, err
-		}
-
-		row = sheet.AddRow()
-	}
-
-	var currentCount int
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-		added, err := g.addTableHeader(row, sheetNo, f, count)
-		if err != nil {
-			return 0, err
-		}
-		count += added
-		currentCount += added
-	}
-
-	return currentCount, nil
-}
-
-func (g *Generator) addTableHeader(row *xlsx.Row, sheetNo int, f reflect.StructField, currentCount int) (int, error) {
-	fv := f.Type
-	kind := fv.Kind()
-	if kind == reflect.Pointer {
-		fv = fv.Elem()
-		kind = fv.Kind()
-	}
-
-	if kind == reflect.Struct {
-		if !isCommonGoStruct(fv) {
-			return g.AddTableHeaders(row, sheetNo, fv, currentCount)
-		}
-	}
-
-	tagValue, ok := f.Tag.Lookup("xlsx")
-	if !ok {
-		tagValue = ""
-	}
-
-	fieldOptions, err := g.parseTagValue(sheetNo, tagValue)
-	if err != nil {
-		return 0, err
-	}
-
-	if fieldOptions.Skip {
-		return 0, nil
-	}
-	cell := row.AddCell()
-
-	fieldOptions.ApplyToHeaderCell(cell)
-
-	sheet, err := g.GetSheet(sheetNo)
-	if err != nil {
-		return 0, err
-	}
-
-	fieldOptions.ApplyToCol(sheet.Cols[currentCount])
-
-	return 1, nil
-}
 
 // AddTableDataCells creates new data cells
 func (g *Generator) AddTableDataCells(row *xlsx.Row, sheetNo int, t reflect.Type, data reflect.Value, count int) (int, error) {
@@ -87,7 +21,8 @@ func (g *Generator) AddTableDataCells(row *xlsx.Row, sheetNo int, t reflect.Type
 
 	var currentCount int
 	for i := 0; i < t.NumField(); i++ {
-		added, err := g.addTableDataCell(row, sheetNo, data, t.Field(i), count)
+		field := t.Field(i)
+		added, err := g.addTableDataCell(row, sheetNo, data, &field, count)
 		if err != nil {
 			return 0, err
 		}
@@ -99,16 +34,26 @@ func (g *Generator) AddTableDataCells(row *xlsx.Row, sheetNo int, t reflect.Type
 	return currentCount, nil
 }
 
-func (g *Generator) addTableDataCell(row *xlsx.Row, sheetNo int, data reflect.Value, f reflect.StructField, currentCount int) (int, error) {
-	fv := data.FieldByName(f.Name)
+func (g *Generator) addTableDataCell(row *xlsx.Row, sheetNo int, data reflect.Value, field *reflect.StructField, currentCount int) (int, error) {
+	var fv reflect.Value
+	if field != nil {
+		fv = data.FieldByName(field.Name)
+	} else {
+		fv = data
+	}
+
 	kind := fv.Kind()
 	if kind == reflect.Pointer {
 		fv = fv.Elem()
 		kind = fv.Kind()
 	}
 
+	if kind == reflect.Map {
+		return g.addMapTableCells(row, sheetNo, data, *field, currentCount)
+	}
+
 	if kind == reflect.Struct {
-		if !isCommonGoStruct(fv.Type()) {
+		if !helpers.IsCommonGoStruct(fv.Type()) {
 			return g.AddTableDataCells(row, sheetNo, fv.Type(), fv, currentCount)
 		}
 	}
@@ -123,6 +68,23 @@ func (g *Generator) addTableDataCell(row *xlsx.Row, sheetNo int, data reflect.Va
 
 	fieldOptions.ApplyToCell(cell)
 	return 1, nil
+}
+
+func (g *Generator) addMapTableCells(row *xlsx.Row, sheetNo int, data reflect.Value, field reflect.StructField, currentCount int) (int, error) {
+	fv := data.FieldByName(field.Name)
+	var added int
+
+	keys := fv.MapKeys()
+	for _, key := range keys {
+		value := fv.MapIndex(key)
+		nAdded, err := g.addTableDataCell(row, sheetNo, value, nil, currentCount+added)
+		if err != nil {
+			return 0, err
+		}
+		added += nAdded
+	}
+
+	return added, nil
 }
 
 func addValueToCell(data reflect.Value, cell *xlsx.Cell) {
@@ -141,12 +103,4 @@ func addValueToCell(data reflect.Value, cell *xlsx.Cell) {
 	}
 
 	cell.SetValue(data.Interface())
-}
-
-var commonGoStructs = []reflect.Type{
-	reflect.TypeOf(time.Time{}),
-}
-
-func isCommonGoStruct(t reflect.Type) bool {
-	return slices.Contains(commonGoStructs, t)
 }

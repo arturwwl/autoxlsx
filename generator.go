@@ -8,13 +8,8 @@ import (
 
 	"github.com/arturwwl/gointtoletters"
 	"github.com/tealeg/xlsx"
-)
 
-// custom errors
-var (
-	ErrExpectedSlice = fmt.Errorf("invalid data type provided, expected slice")
-	ErrEmptySlice    = fmt.Errorf("empty slice provided")
-	ErrSheetNotFound = fmt.Errorf("sheet not found")
+	"github.com/arturwwl/autoxlsx/pkg/helpers"
 )
 
 // Generator holds data needed for generating
@@ -70,59 +65,71 @@ func (g *Generator) AddSheet(sheetName string) (int, error) {
 // GetSheet if not found it returns an error
 func (g *Generator) GetSheet(sheetNo int) (*xlsx.Sheet, error) {
 	if len(g.sheets) <= sheetNo {
-		return nil, ErrSheetNotFound
+		return nil, &ErrSheetNotFound{}
 	}
 
 	return g.sheets[sheetNo], nil
 }
 
-// AddData creates headers and rows
-func (g *Generator) AddData(sheetNo int, data interface{}) error {
-	sData := reflect.ValueOf(data)
-	if sData.Kind() != reflect.Slice {
-		return ErrExpectedSlice
+// validateAndLength validates the input data, returns the slice length, and an error if validation fails
+func validateAndLength(data interface{}) (int, error) {
+	sliceValue := reflect.ValueOf(data)
+	if sliceValue.Kind() != reflect.Slice {
+		return 0, &ErrExpectedSlice{}
 	}
 
-	sLen := sData.Len()
-	if sLen == 0 {
-		return ErrEmptySlice
+	sliceLen := sliceValue.Len()
+	if sliceLen == 0 {
+		return 0, &ErrEmptySlice{}
 	}
 
-	var rowLength int
-	var i int
-	for i = 0; i < sLen; i++ {
-		s := sData.Index(i)
-		t := s.Type()
+	return sliceLen, nil
+}
 
-		if t.Kind() == reflect.Pointer {
-			if s.IsNil() {
-				continue
+// processHeaders processes headers for the given item and updates mapFields if needed
+func (g *Generator) processHeaders(sheetNo int, itemType reflect.Type, itemValue reflect.Value, mapFields *[]int) (int, error) {
+	count, withMap, err := g.AddTableHeaders(nil, sheetNo, itemType, itemValue, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	// Identify fields with map type
+	if withMap {
+		for j := 0; j < itemType.NumField(); j++ {
+			field := itemType.Field(j)
+			if field.Type.Kind() == reflect.Map {
+				*mapFields = append(*mapFields, j)
 			}
-
-			s = s.Elem()
-			t = s.Type()
-		}
-
-		if i == 0 {
-			count, err := g.AddTableHeaders(nil, sheetNo, t, 0)
-			if err != nil {
-				return err
-			}
-			rowLength = count
-		}
-
-		_, err := g.AddTableDataCells(nil, sheetNo, t, s, 0)
-		if err != nil {
-			return err
 		}
 	}
 
+	return count, nil
+}
+
+// processItem processes an individual item, updating mapValues and processing data cells
+func (g *Generator) processItem(sheetNo int, itemType reflect.Type, itemValue reflect.Value, mapFields []int, mapValues map[int][]reflect.Value) error {
+	// Collect map values for comparison
+	for _, key := range mapFields {
+		mapValues[key] = append(mapValues[key], itemValue.Field(key))
+	}
+
+	// Process data cells
+	_, err := g.AddTableDataCells(nil, sheetNo, itemType, itemValue, 0)
+	return err
+}
+
+// setSheetProperties sets up sheet properties such as AutoFilter and SheetViews
+func (g *Generator) setSheetProperties(sheetNo, rowLength, sliceLen int) error {
 	sheet, err := g.GetSheet(sheetNo)
 	if err != nil {
 		return err
 	}
 
-	sheet.AutoFilter = &xlsx.AutoFilter{TopLeftCell: "A1", BottomRightCell: fmt.Sprintf("%s%d", gointtoletters.IntToLetters(rowLength), i)}
+	sheet.AutoFilter = &xlsx.AutoFilter{
+		TopLeftCell:     "A1",
+		BottomRightCell: fmt.Sprintf("%s%d", gointtoletters.IntToLetters(rowLength), sliceLen),
+	}
+
 	sheet.SheetViews = append(sheet.SheetViews, xlsx.SheetView{
 		Pane: &xlsx.Pane{
 			XSplit:      0,
@@ -132,10 +139,84 @@ func (g *Generator) AddData(sheetNo int, data interface{}) error {
 			State:       "frozen",
 		},
 	})
+
 	return nil
 }
 
-func (g *Generator) parseTagValue(sheetNo int, tagValue string) (*CustomOptions, error) {
+func (g *Generator) AddData(sheetNo int, data interface{}) error {
+	sliceLen, err := validateAndLength(data)
+	if err != nil {
+		return err
+	}
+
+	rowLength, mapValues, err := g.processData(sheetNo, data, sliceLen)
+	if err != nil {
+		return err
+	}
+
+	if err := g.checkConsistentMapKeys(mapValues); err != nil {
+		return err
+	}
+
+	if err := g.setSheetProperties(sheetNo, rowLength, sliceLen); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *Generator) processData(sheetNo int, data interface{}, sliceLen int) (int, map[int][]reflect.Value, error) {
+	var rowLength int
+	var mapFields []int
+	mapValues := make(map[int][]reflect.Value)
+
+	for i := 0; i < sliceLen; i++ {
+		itemValue := reflect.ValueOf(data).Index(i)
+		itemType := itemValue.Type()
+
+		// Handle pointers
+		if itemType.Kind() == reflect.Ptr {
+			if itemValue.IsNil() {
+				continue
+			}
+
+			itemValue = itemValue.Elem()
+			itemType = itemValue.Type()
+		}
+
+		// Process headers for the first item
+		if i == 0 {
+			var err error
+			rowLength, err = g.processHeaders(sheetNo, itemType, itemValue, &mapFields)
+			if err != nil {
+				return 0, nil, err
+			}
+		}
+
+		// Process the item
+		if err := g.processItem(sheetNo, itemType, itemValue, mapFields, mapValues); err != nil {
+			return 0, nil, err
+		}
+	}
+
+	return rowLength, mapValues, nil
+}
+
+func (g *Generator) checkConsistentMapKeys(mapValues map[int][]reflect.Value) error {
+	for _, maps := range mapValues {
+		if sameKeys, err := helpers.AreAllMapKeysSame(maps); err != nil || !sameKeys {
+			return &ErrInconsistentMapKeys{}
+		}
+	}
+	return nil
+}
+
+func (g *Generator) parseTagValue(sheetNo int, f reflect.StructField) (*CustomOptions, error) {
+	tagValue, ok := f.Tag.Lookup("xlsx")
+	if !ok {
+		tagValue = ""
+	}
+
 	_, err := g.GetSheet(sheetNo)
 	if err != nil {
 		return nil, err
