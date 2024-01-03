@@ -2,6 +2,7 @@ package autoxlsx
 
 import (
 	"reflect"
+	"sort"
 
 	"github.com/tealeg/xlsx"
 
@@ -75,6 +76,11 @@ func (g *Generator) addMapTableCells(row *xlsx.Row, sheetNo int, data reflect.Va
 	var added int
 
 	keys := fv.MapKeys()
+	// Sort the keys by name
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].String() < keys[j].String()
+	})
+
 	for _, key := range keys {
 		value := fv.MapIndex(key)
 		nAdded, err := g.addTableDataCell(row, sheetNo, value, nil, currentCount+added)

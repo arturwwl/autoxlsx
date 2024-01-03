@@ -3,13 +3,19 @@ package helpers
 import (
 	"reflect"
 	"slices"
+	"sort"
 )
 
 // GetMapKeys retrieves the keys of a map from a reflect.StructField.
 func GetMapKeys(data reflect.Value) ([]string, error) {
 	// Convert keys to string slice
 	var keyStrings []string
-	for _, key := range data.MapKeys() {
+	keys := data.MapKeys()
+	// Sort the keys by name
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].String() < keys[j].String()
+	})
+	for _, key := range keys {
 		keyStrings = append(keyStrings, key.String())
 	}
 
