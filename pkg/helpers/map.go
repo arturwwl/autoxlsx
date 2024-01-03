@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"reflect"
-	"slices"
 )
 
 // GetMapKeys retrieves the keys of a map from a reflect.StructField.
@@ -12,8 +11,6 @@ func GetMapKeys(data reflect.Value) ([]string, error) {
 	for _, key := range data.MapKeys() {
 		keyStrings = append(keyStrings, key.String())
 	}
-
-	slices.Sort(keyStrings)
 
 	return keyStrings, nil
 }
