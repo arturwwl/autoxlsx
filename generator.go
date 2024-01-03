@@ -87,7 +87,7 @@ func validateAndLength(data interface{}) (int, error) {
 }
 
 // processHeaders processes headers for the given item and updates mapFields if needed
-func (g *Generator) processHeaders(sheetNo int, itemType reflect.Type, itemValue reflect.Value, mapFields *[]int) (int, error) {
+func (g *Generator) processHeaders(sheetNo int, itemType reflect.Type, itemValue reflect.Value, mapFields *[]string) (int, error) {
 	count, withMap, err := g.AddTableHeaders(nil, sheetNo, itemType, itemValue, 0)
 	if err != nil {
 		return 0, err
@@ -98,7 +98,7 @@ func (g *Generator) processHeaders(sheetNo int, itemType reflect.Type, itemValue
 		for j := 0; j < itemType.NumField(); j++ {
 			field := itemType.Field(j)
 			if field.Type.Kind() == reflect.Map {
-				*mapFields = append(*mapFields, j)
+				*mapFields = append(*mapFields, field.Name)
 			}
 		}
 	}
@@ -107,10 +107,15 @@ func (g *Generator) processHeaders(sheetNo int, itemType reflect.Type, itemValue
 }
 
 // processItem processes an individual item, updating mapValues and processing data cells
-func (g *Generator) processItem(sheetNo int, itemType reflect.Type, itemValue reflect.Value, mapFields []int, mapValues map[int][]reflect.Value) error {
+func (g *Generator) processItem(sheetNo int, itemType reflect.Type, itemValue reflect.Value, mapFields []string, mapValues map[string][]reflect.Value) error {
 	// Collect map values for comparison
-	for _, key := range mapFields {
-		mapValues[key] = append(mapValues[key], itemValue.Field(key))
+	for _, fieldName := range mapFields {
+		field, found := itemType.FieldByName(fieldName)
+		if !found {
+			return fmt.Errorf("field %s not found in type %s", fieldName, itemType.Name())
+		}
+		index := field.Index[0] // Assuming map fields have only one index
+		mapValues[fieldName] = append(mapValues[fieldName], itemValue.Field(index))
 	}
 
 	// Process data cells
@@ -165,10 +170,10 @@ func (g *Generator) AddData(sheetNo int, data interface{}) error {
 	return nil
 }
 
-func (g *Generator) processData(sheetNo int, data interface{}, sliceLen int) (int, map[int][]reflect.Value, error) {
+func (g *Generator) processData(sheetNo int, data interface{}, sliceLen int) (int, map[string][]reflect.Value, error) {
 	var rowLength int
-	var mapFields []int
-	mapValues := make(map[int][]reflect.Value)
+	var mapFields []string
+	mapValues := make(map[string][]reflect.Value)
 
 	for i := 0; i < sliceLen; i++ {
 		itemValue := reflect.ValueOf(data).Index(i)
@@ -202,7 +207,7 @@ func (g *Generator) processData(sheetNo int, data interface{}, sliceLen int) (in
 	return rowLength, mapValues, nil
 }
 
-func (g *Generator) checkConsistentMapKeys(mapValues map[int][]reflect.Value) error {
+func (g *Generator) checkConsistentMapKeys(mapValues map[string][]reflect.Value) error {
 	for _, maps := range mapValues {
 		if sameKeys, err := helpers.AreAllMapKeysSame(maps); err != nil || !sameKeys {
 			return &ErrInconsistentMapKeys{}
