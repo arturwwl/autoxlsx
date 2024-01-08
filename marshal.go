@@ -1,11 +1,15 @@
 package autoxlsx
 
-import "io"
+import (
+	"io"
+
+	"github.com/arturwwl/autoxlsx/sheetList"
+)
 
 // Marshal expects map, which key is sheet name and value is slice of objects
-func Marshal(in map[string]interface{}, out io.Writer) error {
+func Marshal(in *sheetList.List, out io.Writer) error {
 	g := NewGenerator()
-	err := g.GenerateXLSX(in)
+	err := g.GenerateXLSX(in.Get())
 	if err != nil {
 		return err
 	}

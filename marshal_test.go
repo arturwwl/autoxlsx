@@ -3,6 +3,8 @@ package autoxlsx
 import (
 	"bytes"
 	"testing"
+
+	"github.com/arturwwl/autoxlsx/sheetList"
 )
 
 type SomeStruct struct {
@@ -34,6 +36,30 @@ func TestMarshal(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "success - sort desc sheets",
+			arg: map[string]interface{}{
+				"sheet3": []SomeStruct{
+					{
+						ID:    1,
+						Value: 1.1,
+					},
+				},
+				"sheet1": []SomeStruct{
+					{
+						ID:    2,
+						Value: 2.2,
+					},
+				},
+				"sheet2": []SomeStruct{
+					{
+						ID:    3,
+						Value: 3.3,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "invalid sheet name",
 			arg: map[string]interface{}{
 				"invalid sheet name too long to match": []SomeStruct{
@@ -50,7 +76,7 @@ func TestMarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buff := new(bytes.Buffer)
-			err := Marshal(tt.arg, buff)
+			err := Marshal(sheetList.New(tt.arg), buff)
 
 			if (err == nil) == tt.wantErr {
 				t.Errorf("Marshal got err= %v, want %v", err, tt.wantErr)
