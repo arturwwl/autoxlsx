@@ -51,7 +51,7 @@ func (l *List) sortList(sortAsc bool) {
 		slices.Reverse(keys)
 	}
 
-	sortedList := make(map[string]interface{})
+	sortedList := make(map[string]interface{}, len(l.list))
 	for _, key := range keys {
 		sortedList[key] = l.list[key]
 	}
