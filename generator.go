@@ -10,6 +10,7 @@ import (
 	"github.com/tealeg/xlsx"
 
 	"github.com/arturwwl/autoxlsx/pkg/helpers"
+	"github.com/arturwwl/autoxlsx/sheetList"
 )
 
 // Generator holds data needed for generating
@@ -31,14 +32,15 @@ func NewGenerator() *Generator {
 }
 
 // GenerateXLSX generate xlsx for provided slice
-func (g *Generator) GenerateXLSX(list map[string]interface{}) error {
-	for sheetName, data := range list {
+func (g *Generator) GenerateXLSX(list *sheetList.List) error {
+	data, keys := list.Get()
+	for _, sheetName := range keys {
 		sheetNo, err := g.AddSheet(sheetName)
 		if err != nil {
 			return err
 		}
 
-		err = g.AddData(sheetNo, data)
+		err = g.AddData(sheetNo, data[sheetName])
 		if err != nil {
 			return err
 		}
