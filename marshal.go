@@ -7,8 +7,8 @@ import (
 )
 
 // Marshal expects map, which key is sheet name and value is slice of objects
-func Marshal(in *sheetList.List, out io.Writer) error {
-	g := NewGenerator()
+func Marshal(in *sheetList.List, out io.Writer, options ...GeneratorOption) error {
+	g := NewGenerator(options...)
 	err := g.GenerateXLSX(in)
 	if err != nil {
 		return err

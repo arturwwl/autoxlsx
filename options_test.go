@@ -73,7 +73,8 @@ func TestNewCustomOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewCustomOptions(tt.arg)
+			g := &Generator{}
+			got, err := g.NewCustomOptions(tt.arg)
 
 			if (err == nil) == tt.wantErr {
 				t.Errorf("NewCustomOptions got err= %v, want %v", err, tt.wantErr)

@@ -4,19 +4,47 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tealeg/xlsx"
+	"github.com/tealeg/xlsx/v3"
 )
+
+// GeneratorOption holds generator option
+type GeneratorOption interface{}
+
+// GeneratorOptionAutoFilter holds option for auto filter
+type GeneratorOptionAutoFilter struct{}
+
+// GeneratorOptionFreezeFirstColumn holds option for freeze first column
+type GeneratorOptionFreezeFirstColumn struct{}
+
+// GeneratorOptionFreezeFirstRow holds option for freeze first row
+type GeneratorOptionFreezeFirstRow struct{}
+
+// generatorOptionCustomDropdown holds option for custom dropdown
+type generatorOptionCustomDropdown struct {
+	values map[string][]string
+}
+
+// GeneratorOptionCustomDropdown creates custom dropdown option
+func GeneratorOptionCustomDropdown(values map[string][]string) GeneratorOption {
+	return generatorOptionCustomDropdown{values: values}
+}
 
 // CustomOptions holds options for cells and cols
 type CustomOptions struct {
-	Format     string
-	Width      float64
-	ColumnName string
-	Skip       bool
+	Format         string
+	Width          float64
+	ColumnName     string
+	Skip           bool
+	CustomDropdown CustomDropdown
+}
+
+type CustomDropdown struct {
+	Values []string
+	Rows   int
 }
 
 // NewCustomOptions creates CustomOptions from tag value
-func NewCustomOptions(tagValue string) (*CustomOptions, error) {
+func (g *Generator) NewCustomOptions(tagValue string) (*CustomOptions, error) {
 	if tagValue == "" || tagValue == "-" {
 		return &CustomOptions{
 			Skip: true,
@@ -41,21 +69,48 @@ func NewCustomOptions(tagValue string) (*CustomOptions, error) {
 					return options, err
 				}
 			}
+
+			if strings.Contains(v, "dropdown:") {
+				options.CustomDropdown.Rows, err = strconv.Atoi(strings.TrimPrefix(v, "dropdown:"))
+				if err != nil {
+					return options, err
+				}
+
+				values, ok := g.customDropdown[options.ColumnName]
+				if ok {
+					options.CustomDropdown.Values = values
+				}
+			}
 		}
 	}
 	return options, nil
 }
 
+var defaultWidth = 12.0
+
 // ApplyToCol applies options to column
 func (co *CustomOptions) ApplyToCol(col *xlsx.Col) {
 	if co.Width > 0 {
-		col.Width = co.Width
+		col.Width = &co.Width
+	} else {
+		col.Width = &defaultWidth
 	}
 }
 
 // ApplyToHeaderCell applies options to header's cell
-func (co *CustomOptions) ApplyToHeaderCell(cell *xlsx.Cell) {
+func (co *CustomOptions) ApplyToHeaderCell(cell *xlsx.Cell, colIndex int) error {
 	cell.SetValue(co.ColumnName)
+	if len(co.CustomDropdown.Values) > 0 {
+		sheet := cell.Row.Sheet
+
+		dv := xlsx.NewDataValidation(1, colIndex, co.CustomDropdown.Rows+1, colIndex, true)
+		err := dv.SetDropList(co.CustomDropdown.Values)
+		if err != nil {
+			return err
+		}
+		sheet.AddDataValidation(dv)
+	}
+	return nil
 }
 
 // ApplyToCell applies options to cell

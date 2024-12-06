@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/arturwwl/gointtoletters"
-	"github.com/tealeg/xlsx"
+	"github.com/tealeg/xlsx/v3"
 
 	"github.com/arturwwl/autoxlsx/pkg/helpers"
 	"github.com/arturwwl/autoxlsx/sheetList"
@@ -16,19 +16,40 @@ import (
 // Generator holds data needed for generating
 type Generator struct {
 	sync.Mutex
-	sheets        []*xlsx.Sheet
-	customOptions [][]*CustomOptions
-	wb            *xlsx.File
+	sheets            []*xlsx.Sheet
+	customOptions     [][]*CustomOptions
+	wb                *xlsx.File
+	autoFilter        bool
+	freezeFirstColumn bool
+	freezeFirstRow    bool
+	customDropdown    map[string][]string
 }
 
 // NewGenerator creates new generator instance
-func NewGenerator() *Generator {
-	return &Generator{
+func NewGenerator(options ...GeneratorOption) *Generator {
+	g := &Generator{
 		Mutex:         sync.Mutex{},
 		sheets:        nil,
 		customOptions: nil,
 		wb:            xlsx.NewFile(),
 	}
+
+	for _, option := range options {
+		switch v := option.(type) {
+		case GeneratorOptionAutoFilter:
+			g.autoFilter = true
+		case GeneratorOptionFreezeFirstColumn:
+			g.freezeFirstColumn = true
+		case GeneratorOptionFreezeFirstRow:
+			g.freezeFirstRow = true
+		case generatorOptionCustomDropdown:
+			g.customDropdown = v.values
+		default:
+			fmt.Println(option)
+		}
+	}
+
+	return g
 }
 
 // GenerateXLSX generate xlsx for provided slice
@@ -132,20 +153,34 @@ func (g *Generator) setSheetProperties(sheetNo, rowLength, sliceLen int) error {
 		return err
 	}
 
-	sheet.AutoFilter = &xlsx.AutoFilter{
-		TopLeftCell:     "A1",
-		BottomRightCell: fmt.Sprintf("%s%d", gointtoletters.IntToLetters(rowLength), sliceLen),
+	if g.autoFilter {
+		sheet.AutoFilter = &xlsx.AutoFilter{
+			TopLeftCell:     "A1",
+			BottomRightCell: fmt.Sprintf("%s%d", gointtoletters.IntToLetters(rowLength), sliceLen),
+		}
 	}
 
-	sheet.SheetViews = append(sheet.SheetViews, xlsx.SheetView{
-		Pane: &xlsx.Pane{
-			XSplit:      0,
-			YSplit:      1,
-			TopLeftCell: "A2",
-			ActivePane:  "bottomLeft",
-			State:       "frozen",
-		},
-	})
+	if g.freezeFirstColumn {
+		sheet.SheetViews = append(sheet.SheetViews, xlsx.SheetView{
+			Pane: &xlsx.Pane{
+				XSplit:      0,
+				YSplit:      1,
+				TopLeftCell: "A2",
+				ActivePane:  "bottomLeft",
+				State:       "frozen",
+			},
+		})
+	} else if g.freezeFirstRow {
+		sheet.SheetViews = append(sheet.SheetViews, xlsx.SheetView{
+			Pane: &xlsx.Pane{
+				XSplit:      1,
+				YSplit:      0,
+				TopLeftCell: "B1",
+				ActivePane:  "topRight",
+				State:       "frozen",
+			},
+		})
+	}
 
 	return nil
 }
@@ -229,7 +264,7 @@ func (g *Generator) parseTagValue(sheetNo int, f reflect.StructField) (*CustomOp
 		return nil, err
 	}
 
-	options, err := NewCustomOptions(tagValue)
+	options, err := g.NewCustomOptions(tagValue)
 	if err != nil {
 		return nil, err
 	}

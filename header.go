@@ -3,7 +3,7 @@ package autoxlsx
 import (
 	"reflect"
 
-	"github.com/tealeg/xlsx"
+	"github.com/tealeg/xlsx/v3"
 
 	"github.com/arturwwl/autoxlsx/pkg/helpers"
 )
@@ -76,7 +76,11 @@ func (g *Generator) addTableHeader(row *xlsx.Row, sheetNo int, field reflect.Str
 func (g *Generator) addTableHeaderCell(row *xlsx.Row, sheetNo int, currentCount int, fieldOptions *CustomOptions, customValue string) error {
 	cell := row.AddCell()
 
-	fieldOptions.ApplyToHeaderCell(cell)
+	err := fieldOptions.ApplyToHeaderCell(cell, currentCount)
+	if err != nil {
+		return err
+	}
+
 	if customValue != "" {
 		cell.SetValue(customValue)
 	}
@@ -86,7 +90,10 @@ func (g *Generator) addTableHeaderCell(row *xlsx.Row, sheetNo int, currentCount 
 		return err
 	}
 
-	fieldOptions.ApplyToCol(sheet.Cols[currentCount])
+	col := xlsx.NewColForRange(currentCount+1, currentCount+1)
+	sheet.Cols.Add(col)
+
+	fieldOptions.ApplyToCol(col)
 
 	return nil
 }

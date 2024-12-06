@@ -4,18 +4,18 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/tealeg/xlsx"
+	"github.com/tealeg/xlsx/v3"
 
 	"github.com/arturwwl/autoxlsx/pkg/helpers"
 )
 
 // AddTableDataCells creates new data cells
 func (g *Generator) AddTableDataCells(row *xlsx.Row, sheetNo int, t reflect.Type, data reflect.Value, count int) (int, error) {
+	sheet, err := g.GetSheet(sheetNo)
+	if err != nil {
+		return 0, err
+	}
 	if row == nil {
-		sheet, err := g.GetSheet(sheetNo)
-		if err != nil {
-			return 0, err
-		}
 
 		row = sheet.AddRow()
 	}
