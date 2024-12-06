@@ -76,7 +76,7 @@ func (g *Generator) addTableHeader(row *xlsx.Row, sheetNo int, field reflect.Str
 func (g *Generator) addTableHeaderCell(row *xlsx.Row, sheetNo int, currentCount int, fieldOptions *CustomOptions, customValue string) error {
 	cell := row.AddCell()
 
-	err := fieldOptions.ApplyToHeaderCell(cell, currentCount)
+	err := fieldOptions.ApplyToHeaderCell(cell, currentCount, customValue)
 	if err != nil {
 		return err
 	}

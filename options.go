@@ -103,7 +103,7 @@ func (co *CustomOptions) ApplyToCol(col *xlsx.Col) {
 }
 
 // ApplyToHeaderCell applies options to header's cell
-func (co *CustomOptions) ApplyToHeaderCell(cell *xlsx.Cell, colIndex int) error {
+func (co *CustomOptions) ApplyToHeaderCell(cell *xlsx.Cell, colIndex int, customName string) error {
 	cell.SetValue(co.ColumnName)
 	if co.CustomDropdown.Rows > 0 {
 		sheet := cell.Row.Sheet
@@ -116,7 +116,15 @@ func (co *CustomOptions) ApplyToHeaderCell(cell *xlsx.Cell, colIndex int) error 
 			}
 		}
 		if co.CustomDropdown.Sheet != "" {
-			err := dv.SetInFileList(co.CustomDropdown.Sheet, 1, 1, 1, -1)
+			sheetName := co.CustomDropdown.Sheet
+			if co.CustomDropdown.Sheet == "auto" {
+				co.CustomDropdown.Sheet = co.ColumnName
+				if customName != "" {
+					sheetName = customName
+				}
+			}
+
+			err := dv.SetInFileList(sheetName, 1, 1, 1, -1)
 			if err != nil {
 				return err
 			}

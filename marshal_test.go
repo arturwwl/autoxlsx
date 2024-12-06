@@ -19,6 +19,11 @@ type SomeStructWithDropdownSheet struct {
 	Value          float64 `xlsx:"value,format:0.000000000000,width:25"`
 	CustomDropdown string  `xlsx:"custom_dropdown,dropdown:12,dropdown-sheet:sheet1"`
 }
+type SomeStructWithMap struct {
+	ID      int                    `xlsx:"id"`
+	Value   float64                `xlsx:"value,format:0.000000000000,width:25"`
+	SomeMap map[string]interface{} `xlsx:"custom_dropdown,dropdown:12,dropdown-sheet:auto"`
+}
 
 func TestMarshal(t *testing.T) {
 	tests := []struct {
@@ -45,6 +50,35 @@ func TestMarshal(t *testing.T) {
 			},
 			customDropdown: map[string][]string{
 				"custom_dropdown": {"a", "b", "c"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - with dropdown sheet",
+			arg: map[string]interface{}{
+				"sheet1": []SomeStructWithDropdownSheet{
+					{
+						ID:             1,
+						Value:          2.2,
+						CustomDropdown: exampleString,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - with map",
+			arg: map[string]interface{}{
+				"sheet1": []SomeStructWithMap{
+					{
+						ID:    1,
+						Value: 2.2,
+						SomeMap: map[string]interface{}{
+							"key1":  "value1",
+							"Value": "value2",
+						},
+					},
+				},
 			},
 			wantErr: false,
 		},
