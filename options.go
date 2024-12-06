@@ -39,8 +39,9 @@ type CustomOptions struct {
 }
 
 type CustomDropdown struct {
-	Values []string
 	Rows   int
+	Sheet  string
+	Values []string
 }
 
 // NewCustomOptions creates CustomOptions from tag value
@@ -81,6 +82,10 @@ func (g *Generator) NewCustomOptions(tagValue string) (*CustomOptions, error) {
 					options.CustomDropdown.Values = values
 				}
 			}
+
+			if strings.Contains(v, "dropdown-sheet:") {
+				options.CustomDropdown.Sheet = strings.TrimPrefix(v, "dropdown-sheet:")
+			}
 		}
 	}
 	return options, nil
@@ -100,15 +105,26 @@ func (co *CustomOptions) ApplyToCol(col *xlsx.Col) {
 // ApplyToHeaderCell applies options to header's cell
 func (co *CustomOptions) ApplyToHeaderCell(cell *xlsx.Cell, colIndex int) error {
 	cell.SetValue(co.ColumnName)
-	if len(co.CustomDropdown.Values) > 0 {
+	if co.CustomDropdown.Rows > 0 {
 		sheet := cell.Row.Sheet
-
 		dv := xlsx.NewDataValidation(1, colIndex, co.CustomDropdown.Rows+1, colIndex, true)
-		err := dv.SetDropList(co.CustomDropdown.Values)
-		if err != nil {
-			return err
+
+		if len(co.CustomDropdown.Values) > 0 {
+			err := dv.SetDropList(co.CustomDropdown.Values)
+			if err != nil {
+				return err
+			}
 		}
+		if co.CustomDropdown.Sheet != "" {
+			err := dv.SetInFileList(co.CustomDropdown.Sheet, 1, 1, 1, -1)
+			if err != nil {
+				return err
+			}
+		}
+
 		sheet.AddDataValidation(dv)
+
+		return nil
 	}
 	return nil
 }
