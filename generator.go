@@ -46,8 +46,8 @@ func NewGenerator(options ...GeneratorOption) *Generator {
 			g.freezeFirstRow = true
 		case generatorOptionCustomDropdown:
 			g.customDropdown = v.values
-		default:
-			fmt.Println(option)
+		case generatorOptionHiddenSheets:
+			g.hiddenSheets = v.values
 		}
 	}
 
