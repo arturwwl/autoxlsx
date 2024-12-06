@@ -24,9 +24,19 @@ type generatorOptionCustomDropdown struct {
 	values map[string][]string
 }
 
+// generatorOptionHiddenSheets holds option for hidden sheets
+type generatorOptionHiddenSheets struct {
+	values []string
+}
+
 // GeneratorOptionCustomDropdown creates custom dropdown option
 func GeneratorOptionCustomDropdown(values map[string][]string) GeneratorOption {
 	return generatorOptionCustomDropdown{values: values}
+}
+
+// GeneratorOptionHiddenSheets creates hidden sheets option
+func GeneratorOptionHiddenSheets(values []string) GeneratorOption {
+	return generatorOptionHiddenSheets{values: values}
 }
 
 // CustomOptions holds options for cells and cols

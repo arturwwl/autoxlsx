@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"slices"
 	"sync"
 
 	"github.com/arturwwl/gointtoletters"
@@ -23,6 +24,7 @@ type Generator struct {
 	freezeFirstColumn bool
 	freezeFirstRow    bool
 	customDropdown    map[string][]string
+	hiddenSheets      []string
 }
 
 // NewGenerator creates new generator instance
@@ -75,6 +77,10 @@ func (g *Generator) AddSheet(sheetName string) (int, error) {
 	sheet, err := g.wb.AddSheet(sheetName)
 	if err != nil {
 		return -1, err
+	}
+
+	if slices.Contains(g.hiddenSheets, sheetName) {
+		sheet.Hidden = true
 	}
 
 	g.Mutex.Lock()
