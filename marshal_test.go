@@ -10,7 +10,7 @@ import (
 
 type SomeStruct struct {
 	ID             int     `xlsx:"id"`
-	Value          float64 `xlsx:"value,format:0.000000000000,width:25"`
+	Value          float64 `xlsx:"value,format:0.000000000000,width:25,fill:FF0000"`
 	CustomDropdown string  `xlsx:"custom_dropdown,dropdown:12"`
 }
 

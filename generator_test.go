@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/tealeg/xlsx/v3"
 )
 
@@ -167,7 +168,7 @@ func TestGenerator_GetSheet(t *testing.T) {
 			}
 
 			if err == nil {
-				if diff := cmp.Diff(tt.want, got); diff != "" {
+				if diff := cmp.Diff(tt.want, got, cmpopts.IgnoreUnexported(xlsx.Sheet{})); diff != "" {
 					t.Errorf("GetSheet return value differs from expected (-want +got)\n%s", diff)
 				}
 			}

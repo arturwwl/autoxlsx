@@ -46,6 +46,7 @@ type CustomOptions struct {
 	ColumnName     string
 	Skip           bool
 	CustomDropdown CustomDropdown
+	Fill           string
 }
 
 type CustomDropdown struct {
@@ -74,6 +75,10 @@ func (g *Generator) NewCustomOptions(tagValue string) (*CustomOptions, error) {
 				options.Format = strings.TrimPrefix(v, "format:")
 			}
 
+			if strings.Contains(v, "fill:") {
+				options.Fill = strings.TrimPrefix(v, "fill:")
+			}
+
 			if strings.Contains(v, "width:") {
 				options.Width, err = strconv.ParseFloat(strings.TrimPrefix(v, "width:"), 64)
 				if err != nil {
@@ -87,9 +92,9 @@ func (g *Generator) NewCustomOptions(tagValue string) (*CustomOptions, error) {
 					return options, err
 				}
 
-				values, ok := g.customDropdown[options.ColumnName]
+				vals, ok := g.customDropdown[options.ColumnName]
 				if ok {
-					options.CustomDropdown.Values = values
+					options.CustomDropdown.Values = vals
 				}
 			}
 
@@ -125,6 +130,7 @@ func (co *CustomOptions) ApplyToHeaderCell(cell *xlsx.Cell, colIndex int, custom
 				return err
 			}
 		}
+
 		if co.CustomDropdown.Sheet != "" {
 			sheetName := co.CustomDropdown.Sheet
 			if co.CustomDropdown.Sheet == "auto" {
@@ -144,6 +150,15 @@ func (co *CustomOptions) ApplyToHeaderCell(cell *xlsx.Cell, colIndex int, custom
 
 		return nil
 	}
+
+	if co.Fill != "" {
+		style := xlsx.NewStyle()
+		style.Fill.FgColor = co.Fill
+		style.Fill.PatternType = "solid"
+		style.ApplyFill = true
+		cell.SetStyle(style)
+	}
+
 	return nil
 }
 

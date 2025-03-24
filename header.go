@@ -27,9 +27,11 @@ func (g *Generator) AddTableHeaders(row *xlsx.Row, sheetNo int, t reflect.Type, 
 		if err != nil {
 			return 0, false, err
 		}
+
 		if !hasMapField {
 			hasMapField = withMapField
 		}
+
 		count += added
 		currentCount += added
 	}
